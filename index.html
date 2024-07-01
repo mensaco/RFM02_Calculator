@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFM02 Calculations</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+          body {
+            @apply text-xl text-slate-400;
+          }
+
+          .highlight{
+            @apply text-slate-800;
+          }
+          sup{
+            font-variant: small-caps;
+            font-family: 'Courier New', Courier, monospace;
+          }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div x-data="App()" class="p-3">
+
+        <!-- #region Configuration Settings -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand" x-html="!expand?expandicon:collapseicon"></span>
+                Configuration Setting Command (<span class="highlight"
+                    x-text="ConfigurationSettingCommandHex()"></span>)
+            </div>
+
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="ConfigurationSettingCommandClick(indx)"></div>
+                            <div x-text="ConfigurationSettingCommandNames[indx]"
+                                @click="ConfigurationSettingCommandClick(indx)"></div>
+                            <div x-text="ConfigurationSettingCommand[indx]" class="w-8 highlight"
+                                @click="ConfigurationSettingCommandClick(indx)"></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="my-3">
+                    <div>Frequency Band <span class="highlight" x-text="FrequencyBand()"></span> MHz</div>
+                </div>
+                <div class="my-3">
+                    <div>Clock Output Frequency <span class="highlight" x-text="ClockOutputFrequency()"></span> MHz
+                    </div>
+                </div>
+                <div class="my-3">
+                    <div>Crystal Load Capacitance <span class="highlight" x-text="CrystalLoadCapacitance()"></span> pF
+                    </div>
+                </div>
+            </div>
+
+
+
+
+        </div>
+        <!-- #endregion Configuration Settings -->
+
+
+        <!-- #region Power Management -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand" x-html="!expand?expandicon:collapseicon"></span>
+                Power Management Command (<span class="highlight" x-text="PowerManagementCommandHex()"></span>)
+            </div>
+
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="PowerManagementCommandClick(indx)"></div>
+                            <div x-text="PowerManagementCommandNames[indx]" @click="PowerManagementCommandClick(indx)">
+                            </div>
+                            <div x-text="PowerManagementCommand[indx]" class="w-8 highlight"
+                                @click="PowerManagementCommandClick(indx)"></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="my-3">
+                    <div>Automatic Control [a1<sup>I,II</sup>] <input type="checkbox"
+                            :checked="PowerManagementCommand[8]==1" readonly disabled></input><br>
+
+
+                    </div>
+                    <div>Crystal Oscillator [ex<sup>II,III</sup>] <input x-show="PowerManagementCommand[8]==0"
+                            type="checkbox" :checked="PowerManagementCommand[10]==1" readonly disabled></input> <span
+                            x-show="PowerManagementCommand[8]==1"> is controlled automatically.</span>
+                    </div>
+                    <div>Synthesizer [es<sup>II,III</sup>] <input x-show="PowerManagementCommand[8]==0" type="checkbox"
+                            :checked="PowerManagementCommand[11]==1" readonly disabled></input> <span
+                            x-show="PowerManagementCommand[8]==1"> is controlled automatically.</span>
+                    </div>
+                    <div>Power Amplifier [ea<sup>II,III</sup>] <input type="checkbox"
+                            :checked="PowerManagementCommand[12]==1" readonly disabled></input>
+                    </div>
+                    <div>Low Battery Detector [eb] <input type="checkbox" :checked="PowerManagementCommand[13]==1"
+                            readonly disabled></input>
+                    </div>
+                    <div>Wake-up Timer [et] <input type="checkbox" :checked="PowerManagementCommand[14]==1" readonly
+                            disabled></input>
+                    </div>
+                    <div>Disable Clock Output Buffer [dc] <input type="checkbox"
+                            :checked="PowerManagementCommand[15]==1" readonly disabled></input>
+                    </div>
+
+                    <div>
+                        <i class="text-sm text-sky-500 ml-3"><sup>I</sup> If bit a1 is set, <span
+                                :class="PowerManagementCommand[8]==1?'text-amber-500':''">
+                                the crystal oscillator and the
+                                synthesizer are controlled automatically
+                            </span>. Data Transmit Command starts up the crystal oscillator
+                            and as soon as a stable reference frequency is available the synthesizer starts. After a
+                            subsequent delay to allow locking of the PLL, if a0 is set <span
+                                :class="PowerManagementCommand[8]==1&&PowerManagementCommand[9]==1?'text-amber-500':''">
+                                the power amplifier is turned on as
+                                well
+                            </span>.</i>
+                    </div>
+                    <div><i class="text-sm text-sky-500 ml-3">
+                            <sup>II</sup>The ex bit should be set in the Power Management Command for the correct
+                            control of
+                            es and ea. The oscillator can be switched off by clearing the ex bit after the transmission.
+                        </i>
+                    </div>
+                    <div>
+                        <i class="text-sm ml-3"
+                            :class="warnIII() ? 'text-red-700 font-semibold':'text-sky-500'"><sup>III</sup> To enable
+                            the
+                            automatic internal control of the crystal
+                            oscillator, the synthesizer and the power amplifier, the corresponding bits (ex, es, ea)
+                            must be
+                            zero in the Power Management Command.</i>
+                    </div>
+                    <div>
+                        <i class="text-sm text-sky-500 ml-3"><sup>IV</sup> The <span class="font-semibold">Sleep
+                                Command</span> can be used to indicate the end
+                            of the data transmission process.</i>
+                    </div>
+                    <div>
+                        <i class="text-sm text-sky-500 ml-3"><sup>V</sup> For processing the events caused by the
+                            peripheral
+                            blocks (POR, LBD or wake-up timer) the chip requires operation of the crystal oscillator.
+                            This
+                            operation is fully controlled internally, independently from the status of the ex bit, but
+                            if
+                            the dc bit is zero, the oscillator remains active until <span class="font-semibold">Sleep
+                                Command</span> is issued. (This command
+                            can be considered as an event controller reset.)</i>
+                    </div>
+
+
+
+
+                </div>
+            </div>
+
+
+        </div>
+        <!-- #endregion Power Management -->
+
+
+        <!-- #region Frequency Setting -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand" x-html="!expand?expandicon:collapseicon"></span>
+                Frequency Setting Command (<span class="highlight" x-text="FrequencySettingCommandHex()"></span>)
+            </div>
+
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="FrequencySettingCommandClick(indx)"></div>
+                            <div x-text="FrequencySettingCommandNames[indx]"
+                                @click="FrequencySettingCommandClick(indx)">
+                            </div>
+                            <div x-text="FrequencySettingCommand[indx]" class="w-8 highlight"
+                                @click="FrequencySettingCommandClick(indx)"></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="my-3">
+                    <div>Channel Center Frequency <span class="highlight"
+                            x-text="FrequencySettingCommandFZero()"></span>
+                        MHz</div>
+                </div>
+
+                <div>
+                    <i class="text-sm text-sky-500 ml-3"><sup></sup>For correct operation of the frequency synthesizer,
+                        the
+                        frequency and band of operation need to be
+                        programmed before the synthesizer is started. Directly after activation of the synthesizer, the
+                        RF
+                        VCO is
+                        calibrated to ensure proper operation in the programmed frequency band.</i>
+                </div>
+            </div>
+
+
+
+
+        </div>
+        <!-- #endregion Frequency Setting -->
+
+
+        <!-- #region Data Rate -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>Data Rate Command (<span class="highlight"
+                    x-text="DataRateCommandHex()"></span>)
+            </div>
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="DataRateCommandClick(indx)"></div>
+                            <div x-text="DataRateCommandNames[indx]" @click="DataRateCommandClick(indx)"></div>
+                            <div x-text="DataRateCommand[indx]" class="w-8 highlight"
+                                @click="DataRateCommandClick(indx)">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="my-3">
+                    <div>Baud Rate <span class="highlight" x-text="BaudRate()"></span> kHz</div>
+                </div>
+                <i class="text-sm text-sky-500 ml-3">
+                    PLL bandwidth should be set according the data rate. Please see the PLL Setting Command.
+                </i>
+            </div>
+        </div>
+        <!-- #endregion Data Rate -->
+
+
+        <!-- #region Output Power -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>Output Power Command (<span class="highlight"
+                    x-text="PowerSettingCommandHex()"></span>)
+            </div>
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="7-indx" @click="PowerSettingCommandClick(indx)"></div>
+                            <div x-text="PowerSettingCommandNames[indx]" @click="PowerSettingCommandClick(indx)"></div>
+                            <div x-text="PowerSettingCommand[indx]" class="w-8 highlight"
+                                @click="PowerSettingCommandClick(indx)">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="my-3">
+                    <div>Output Power <span class="highlight" x-text="OutputPower()"></span> dB</div>
+                </div>
+            </div>
+        </div>
+        <!-- #endregion Output Power -->
+
+
+        <!-- #region Low Battery Detector and TX Bit Synchronization -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>Data Rate Command (<span class="highlight"
+                    x-text="LowBatTxBitSyncCommandHex()"></span>)
+            </div>
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="LowBatTxBitSyncCommandClick(indx)"></div>
+                            <div x-text="LowBatTxBitSyncCommandNames[indx]" @click="LowBatTxBitSyncCommandClick(indx)">
+                            </div>
+                            <div x-text="LowBatTxBitSyncCommand[indx]" class="w-8 highlight"
+                                @click="LowBatTxBitSyncCommandClick(indx)">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="my-3">Disables the Wake-up timer ... [dwc<sup>I</sup>] <input type="checkbox"
+                        :checked="LowBatTxBitSyncCommand[8]==1" readonly disabled></input>
+                </div>
+
+                <div class="my-3">Enables the TX bit synchronization circuit [ebs<sup>II</sup>] <input type="checkbox"
+                        :checked="LowBatTxBitSyncCommand[10]==1" readonly disabled></input>
+                </div>
+
+                <div class="my-3">
+                    <div>Threshold Voltage <span class="highlight" x-text="V_LB()"></span> V</div>
+                </div>
+                <div>
+                    <i class="text-sm text-sky-500 ml-3">
+                        <sup>I</sup> Bit 7 &lt;dwc&gt; disables the Wake-up timer periodical (every 30 second) calibration
+                        if this bit is set
+                    </i>
+                </div>
+                <div>
+                    <i class="text-sm text-sky-500 ml-3">
+                        <sup>II</sup> Bit 5 &lt;ebs&gt; enables the TX bit synchronization circuit. The data rate must be
+                        set by the Data Rate Command
+                    </i>
+                </div>
+            </div>
+        </div>
+        <!-- #endregion Low Battery Detector and TX Bit Synchronization -->
+
+
+<!-- #region Sleep -->
+<div class="p-3 border border-slate-200" x-data="{expand: false}">
+    <div class="mb-3 flex">
+        <span class="text-purple-500" @click="expand = !expand"
+            x-html="!expand?expandicon:collapseicon"></span>Sleep Command (<span class="highlight"
+            x-text="SleepCommandHex()"></span>)
+    </div>
+    <div x-show="expand">
+        <div class="flex justify-start items-center bg-slate-50">
+            <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                    <div x-text="15-indx" @click="SleepCommandClick(indx)"></div>
+                    <div x-text="SleepCommandNames[indx]" @click="SleepCommandClick(indx)">
+                    </div>
+                    <div x-text="SleepCommand[indx]" class="w-8 highlight"
+                        @click="SleepCommandClick(indx)">
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        
+        <div class="my-3">
+            <div>Sleep after <span class="highlight" x-text="SleepAfterCycles()"></span> µC oscillator cycles.</div>
+        </div>
+        <div>
+            <i class="text-sm text-sky-500 ml-3">
+                The effect of this command depends on the Power Management Command. It immediately disables the
+power amplifier (if a0=1 and ea=0) and the synthesizer (if a1=1 and es=0). Stops the crystal oscillator after S periods of the microcontroller clock (if a1=1 and ex=0) to enable the microcontroller to execute all
+necessary commands before entering sleep mode itself. The 8-bit value S is determined by bits &lt;s7:s0&gt;.
+            </i>
+        </div>
+        
+    </div>
+</div>
+<!-- #endregion Sleep -->
+
+
+
+
+
+    </div>
+</body>
+
+<!-- Alpine Plugins -->
+<script src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js" defer></script>
+<!-- Alpine Core -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+<script src="/js/index.alpine.js"></script>
+
+</html>
