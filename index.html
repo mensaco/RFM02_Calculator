@@ -59,6 +59,17 @@
                     <div>Crystal Load Capacitance <span class="highlight" x-text="CrystalLoadCapacitance()"></span> pF
                     </div>
                 </div>
+                <div>Frequency Deviation Direction [ms] <input type="checkbox"
+                        :checked="ConfigurationSettingCommand[12]==1" readonly disabled></input>
+                </div>
+                <div class="my-3">
+                    <div>FSK = 1 Deviation <span class="highlight" x-text="DeviationFsk(1)"></span> kHz
+                    </div>
+                </div>
+                <div class="my-3">
+                    <div>FSK = 0 Deviation <span class="highlight" x-text="DeviationFsk(0)"></span> kHz
+                    </div>
+                </div>
             </div>
 
 
@@ -307,13 +318,15 @@
                 </div>
                 <div>
                     <i class="text-sm text-sky-500 ml-3">
-                        <sup>I</sup> Bit 7 &lt;dwc&gt; disables the Wake-up timer periodical (every 30 second) calibration
+                        <sup>I</sup> Bit 7 &lt;dwc&gt; disables the Wake-up timer periodical (every 30 second)
+                        calibration
                         if this bit is set
                     </i>
                 </div>
                 <div>
                     <i class="text-sm text-sky-500 ml-3">
-                        <sup>II</sup> Bit 5 &lt;ebs&gt; enables the TX bit synchronization circuit. The data rate must be
+                        <sup>II</sup> Bit 5 &lt;ebs&gt; enables the TX bit synchronization circuit. The data rate must
+                        be
                         set by the Data Rate Command
                     </i>
                 </div>
@@ -322,45 +335,113 @@
         <!-- #endregion Low Battery Detector and TX Bit Synchronization -->
 
 
-<!-- #region Sleep -->
-<div class="p-3 border border-slate-200" x-data="{expand: false}">
-    <div class="mb-3 flex">
-        <span class="text-purple-500" @click="expand = !expand"
-            x-html="!expand?expandicon:collapseicon"></span>Sleep Command (<span class="highlight"
-            x-text="SleepCommandHex()"></span>)
-    </div>
-    <div x-show="expand">
-        <div class="flex justify-start items-center bg-slate-50">
-            <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
-                <div class="grid text-right cursor-pointer hover:bg-slate-200">
-                    <div x-text="15-indx" @click="SleepCommandClick(indx)"></div>
-                    <div x-text="SleepCommandNames[indx]" @click="SleepCommandClick(indx)">
-                    </div>
-                    <div x-text="SleepCommand[indx]" class="w-8 highlight"
-                        @click="SleepCommandClick(indx)">
+        <!-- #region Sleep -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>Sleep Command (<span class="highlight"
+                    x-text="SleepCommandHex()"></span>)
+            </div>
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="SleepCommandClick(indx)"></div>
+                            <div x-text="SleepCommandNames[indx]" @click="SleepCommandClick(indx)">
+                            </div>
+                            <div x-text="SleepCommand[indx]" class="w-8 highlight" @click="SleepCommandClick(indx)">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+
+                <div class="my-3">
+                    <div>Sleep after <span class="highlight" x-text="SleepAfterCycles()"></span> µC oscillator cycles.
                     </div>
                 </div>
-            </template>
+                <div>
+                    <i class="text-sm text-sky-500 ml-3">
+                        The effect of this command depends on the Power Management Command. It immediately disables the
+                        power amplifier (if a0=1 and ea=0) and the synthesizer (if a1=1 and es=0). Stops the crystal
+                        oscillator after S periods of the microcontroller clock (if a1=1 and ex=0) to enable the
+                        microcontroller to execute all
+                        necessary commands before entering sleep mode itself. The 8-bit value S is determined by bits
+                        &lt;s7:s0&gt;.
+                    </i>
+                </div>
+
+            </div>
         </div>
+        <!-- #endregion Sleep -->
 
-        
-        <div class="my-3">
-            <div>Sleep after <span class="highlight" x-text="SleepAfterCycles()"></span> µC oscillator cycles.</div>
+
+        <!-- #region WakeUp Timer -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>WakeUp Command (<span class="highlight"
+                    x-text="WakeUpTimerCommandHex()"></span>)
+            </div>
+            <div x-show="expand">
+                <div class="flex justify-start items-center bg-slate-50">
+                    <template x-for="indx in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]">
+                        <div class="grid text-right cursor-pointer hover:bg-slate-200">
+                            <div x-text="15-indx" @click="WakeUpTimerCommandClick(indx)"></div>
+                            <div x-text="WakeUpTimerCommandNames[indx]" @click="WakeUpTimerCommandClick(indx)">
+                            </div>
+                            <div x-text="WakeUpTimerCommand[indx]" class="w-8 highlight"
+                                @click="WakeUpTimerCommandClick(indx)">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+
+                <div class="my-3">
+                    <div>WakeUp Timer Period <span class="highlight" x-text="WakeUpTimerPeriod()"></span> mS.</div>
+                </div>
+                <div>
+                    <i class="text-sm text-sky-500 ml-3">
+                        The wake-up time period can be calculated as:
+                        Twake-up = M * 2^R [ms],
+                        where M is defined by the &lt;m7 : m0&gt; digital value and R is defined by the &lt;r4 : r0&gt;
+                        digital value.
+                    </i>
+                </div>
+                <div>
+                    <i class="text-sm text-sky-500 ml-3">
+                        For continual operation the <span class="font-semibold">et</span> bit should be cleared and set
+                        at the end of every cycle.
+                    </i>
+                </div>
+
+            </div>
         </div>
-        <div>
-            <i class="text-sm text-sky-500 ml-3">
-                The effect of this command depends on the Power Management Command. It immediately disables the
-power amplifier (if a0=1 and ea=0) and the synthesizer (if a1=1 and es=0). Stops the crystal oscillator after S periods of the microcontroller clock (if a1=1 and ex=0) to enable the microcontroller to execute all
-necessary commands before entering sleep mode itself. The 8-bit value S is determined by bits &lt;s7:s0&gt;.
-            </i>
+        <!-- #endregion WakeUp Timer -->
+
+
+
+        <!-- #region HexToCharArray -->
+        <div class="p-3 border border-slate-200" x-data="{expand: false}">
+            <div class="mb-3 flex">
+                <span class="text-purple-500" @click="expand = !expand"
+                    x-html="!expand?expandicon:collapseicon"></span>Hex String to char[]
+            </div>
+            <div x-show="expand">
+                
+                <div class="my-3">
+                    <div>Hex String</div>
+                    <div><textarea class="p-1 w-full border border-slate-300" x-model="hexstring"></textarea></div>
+                </div>
+                <div class="my-3">
+                    <div>char[] values</div>
+                    <div><div class="p-1 w-full border border-slate-300" x-html="chararray().replace(/\n/gi,'</br>')"></div></div>
+                </div>
+
+            </div>
         </div>
-        
-    </div>
-</div>
-<!-- #endregion Sleep -->
-
-
-
+        <!-- #endregion HexToCharArray -->
 
 
     </div>

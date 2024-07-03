@@ -7,6 +7,21 @@ window.App = () => {
         collapseicon: `
         <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 cursor-pointer" viewBox="0 -960 960 960" fill="currentColor"><path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/></svg>
         `,
+
+
+        hexstring:Alpine.$persist(''),
+        chararray(){
+            const assignments = this.hexstring.match(/.{1,2}/g).map(x => x.length == 2 ? x : x+'0').map((x, i) =>  '0x'+ x.toUpperCase());
+            //const contentLength = Math.ceil( this.hexstring.length / 2)
+            //const emptyString = " ".repeat(contentLength);
+            return `
+            char content[] = { ${assignments.join(',')} };
+            int length = ${assignments.length};
+            
+            `
+
+        },
+
         ConfigurationSettingCommandNames: ["1", "0", "0", "b1", "b0", "d2", "d1", "d0", "x3", "x2", "x1", "x0", "ms", "m2", "m1", "m0"],
         ConfigurationSettingCommand: Alpine.$persist([...Array(16)].map((x, i) => 0x8080 >> i & 1).reverse()),
         ConfigurationSettingCommandHex() {
@@ -42,18 +57,20 @@ window.App = () => {
             }
         },
         CrystalLoadCapacitance() {
-            switch (
-            this.ConfigurationSettingCommand[8] * 8
-            + this.ConfigurationSettingCommand[9] * 4
-            + this.ConfigurationSettingCommand[10] * 2
-            + this.ConfigurationSettingCommand[11] * 1) {
-                case 0: return 8.5
-                case 1: return 9.0
-                case 2: return 9.5
-                case 3: return 16.0
-                case 14: return 15.5
-                default: return NaN
-            }
+            const mp = this.ConfigurationSettingCommand.slice(8,12).reduce((a,b) => a*2+b*1)
+            const rt = mp*0.5 + 8.5
+            return rt
+        },
+        MS(){
+            return this.ConfigurationSettingCommand[12]
+        },
+        DeviationFsk(fsk){ // fsk \in {0,1}
+            const SIGN = this.MS() ^ fsk
+            const M = this.ConfigurationSettingCommand.slice(13).reduce((a,b) => a*2+b*1)
+            if(0 <= M  && M <= 6){
+                return - (SIGN == 1? -1: 1) * (M+1) * 30
+            } 
+            return NaN
         },
 
 
@@ -226,6 +243,35 @@ window.App = () => {
         SleepAfterCycles(){
             return this.SleepCommand.slice(8).reduce((a, b) => a * 2 + b * 1, 0)
         },
+
+
+        
+
+        WakeUpTimerCommandNames: ["1", "1", "1", "r4", "r3", "r2", "r1", "r0", "m7", "m6", "m5", "m4", "m3", "m2", "m1", "m0"],
+        WakeUpTimerCommand: Alpine.$persist([...Array(16)].map((x, i) => 0xE000 >> i & 1).reverse()),
+        WakeUpTimerCommandHex() {
+            return "0x" + this.WakeUpTimerCommand.reduce((a, b) => a * 2 + b * 1, 0).toString(16).toUpperCase().padStart(4, "0")
+        },
+        WakeUpTimerCommandClick(index) {
+            if (index > 2) {
+                this.WakeUpTimerCommand[index] = 1 - this.WakeUpTimerCommand[index]
+            }
+            this.WakeUpTimerCommand[0] = 1
+            this.WakeUpTimerCommand[1] = 1
+            this.WakeUpTimerCommand[2] = 1
+        },
+        WakeUpTimerPeriod(){
+            const M = this.WakeUpTimerCommand.slice(8).reduce((a, b) => a * 2 + b * 1, 0)
+            const R = this.WakeUpTimerCommand.slice(3, 8).reduce((a, b) => a * 2 + b * 1, 0)
+            
+            if(R<31){
+                return M * (1 << R)
+            }
+            if(R==31){
+                return M * (1 << 30) * 2.0
+            }
+        },
+
 
 
 
